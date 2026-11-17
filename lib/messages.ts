@@ -1,6 +1,7 @@
 // Typed messages between the background worker and the in-page panel.
 
 import type { CpuPresetId, NetworkPresetId } from './presets';
+import type { ClearKind, ClearResult } from './clearData';
 import type { NetInventory } from './netTally';
 import type { PerfCounters } from './perfCounters';
 import type { DevTab, PageSnapshot, PanelPos, TabState } from './state';
@@ -54,10 +55,12 @@ export type PanelRequest =
   | { type: 'getJsBytes' }
   | { type: 'deactivate' }
   | { type: 'setDevUi'; devOpen?: boolean; devTab?: DevTab }
+  | { type: 'setCacheOff'; cacheOff: boolean }
   | { type: 'startCoverage' }
   | { type: 'finishCoverage' }
   | { type: 'getPerfCounters' }
-  | { type: 'getNetInventory' };
+  | { type: 'getNetInventory' }
+  | { type: 'clearSiteData'; kinds: ClearKind[]; reload: boolean };
 
 /** Background → panel (content script). */
 export type BackgroundEvent =
@@ -71,7 +74,7 @@ export type BackgroundEvent =
 /** Requests answered with something other than TabState. */
 type InfoRequest = Extract<
   PanelRequest,
-  { type: 'getJsBytes' | 'getPerfCounters' | 'getNetInventory' }
+  { type: 'getJsBytes' | 'getPerfCounters' | 'getNetInventory' | 'clearSiteData' }
 >;
 
 /** Requests answered with the tab's updated TabState. */
@@ -108,4 +111,9 @@ export function requestPerfCounters(): Promise<PerfCounters | null> {
 /** Null until a full page load has been watched with the debugger attached. */
 export function requestNetInventory(): Promise<NetInventory | null> {
   return browser.runtime.sendMessage({ type: 'getNetInventory' } satisfies PanelRequest);
+}
+
+/** Null when the debugger isn't attached or the page isn't http(s). */
+export function requestClearSiteData(kinds: ClearKind[], reload: boolean): Promise<ClearResult | null> {
+  return browser.runtime.sendMessage({ type: 'clearSiteData', kinds, reload } satisfies PanelRequest);
 }

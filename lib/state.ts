@@ -21,6 +21,8 @@ export interface TabState {
   unplugged: boolean;
   /** How the page looked with JavaScript on, taken just before switching it off. */
   jsSnapshot: PageSnapshot | null;
+  /** HTTP cache switched off for this tab (every load is a cold load). */
+  cacheOff: boolean;
   /** A coverage scan is armed; the next page load finishes it. */
   coveragePending: boolean;
   /** Last unused-code scan for this tab. */
@@ -49,6 +51,7 @@ export const DEFAULT_STATE: TabState = {
   panelPos: null,
   unplugged: false,
   jsSnapshot: null,
+  cacheOff: false,
   coveragePending: false,
   coverage: null,
   devOpen: false,

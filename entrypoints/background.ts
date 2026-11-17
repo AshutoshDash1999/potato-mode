@@ -1,4 +1,5 @@
 import { isAttached, isRestrictedUrl } from '~/lib/cdp';
+import { clearSiteData, type ClearKind, type ClearResult } from '~/lib/clearData';
 import { cancelCoverage, finishCoverage, forgetCoverage, onCoverageEvent, startCoverage } from '~/lib/coverage';
 import { forgetTab, getJsBytes, onCdpEvent } from '~/lib/jsTally';
 import { blockJs, cleanupAllJsBlocks, jsPatternFor, unblockJs } from '~/lib/jsBlock';
@@ -120,6 +121,7 @@ async function deactivate(tabId: number): Promise<TabState> {
     jsOff: false,
     jsSnapshot: null,
     cssOff: false,
+    cacheOff: false,
     coveragePending: false,
     coverage: null,
   });
@@ -181,7 +183,7 @@ async function ensureContentScript(tabId: number): Promise<boolean> {
   return false;
 }
 
-type Reply = TabState | JsBytes | PerfCounters | NetInventory | null;
+type Reply = TabState | JsBytes | PerfCounters | NetInventory | ClearResult | null;
 
 async function handleRequest(tabId: number, msg: PanelRequest): Promise<Reply> {
   switch (msg.type) {
@@ -191,6 +193,10 @@ async function handleRequest(tabId: number, msg: PanelRequest): Promise<Reply> {
       return (await isAttached(tabId)) ? getPerfCounters(tabId) : null;
     case 'getNetInventory':
       return (await isAttached(tabId)) ? getNetInventory(tabId) : null;
+    case 'clearSiteData':
+      return clearData(tabId, msg.kinds, msg.reload);
+    case 'setCacheOff':
+      return updateThrottles(tabId, { cacheOff: msg.cacheOff });
     case 'startCoverage':
       return startScan(tabId);
     case 'finishCoverage':
@@ -246,6 +252,18 @@ async function finishScan(tabId: number): Promise<TabState> {
     console.warn('[potato] coverage failed', err);
   }
   return setTabState(tabId, { coveragePending: false, coverage });
+}
+
+async function clearData(tabId: number, kinds: ClearKind[], reload: boolean): Promise<ClearResult | null> {
+  const tab = await browser.tabs.get(tabId);
+  if (!tab.url || !/^https?:/.test(tab.url) || !(await isAttached(tabId))) return null;
+  const result = await clearSiteData(tabId, tab.url, kinds);
+  if (reload) {
+    // A first visit also means nothing in the HTTP cache.
+    await updateThrottles(tabId, { cacheOff: true });
+    scheduleReload(tabId);
+  }
+  return result;
 }
 
 async function replug(tabId: number): Promise<TabState> {

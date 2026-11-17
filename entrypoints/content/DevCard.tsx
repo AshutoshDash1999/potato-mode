@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Segmented } from '~/components/Segmented';
 import type { StateRequest } from '~/lib/messages';
 import type { DevTab, TabState } from '~/lib/state';
+import { DataTab } from './DataTab';
 import { ErrorBoundary } from './ErrorBoundary';
 import { VitalsTab } from './VitalsTab';
 import { WasteTab } from './WasteTab';
@@ -16,6 +17,7 @@ interface Props {
 const TABS: { value: DevTab; label: string; emoji: string; title: string }[] = [
   { value: 'vitals', label: 'Vitals', emoji: '💓', title: 'Core Web Vitals and runtime counters' },
   { value: 'waste', label: 'Waste', emoji: '🗑️', title: 'Unused code, heavy files, oversized images' },
+  { value: 'data', label: 'Data', emoji: '🧹', title: 'Clear cookies and storage, cold cache' },
 ];
 
 export function DevCard({ state, busy, request }: Props) {
@@ -64,6 +66,7 @@ export function DevCard({ state, busy, request }: Props) {
               setShowOnPage={setShowOnPage}
             />
           )}
+          {tab === 'data' && <DataTab unplugged={state.unplugged} busy={busy} cacheOff={state.cacheOff} request={request} />}
           </ErrorBoundary>
         </>
       )}
