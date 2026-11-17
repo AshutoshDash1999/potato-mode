@@ -27,12 +27,11 @@ export interface TabState {
   coveragePending: boolean;
   /** Last unused-code scan for this tab. */
   coverage: CoverageResult | null;
-  /** Developer card UI, remembered across reloads. */
-  devOpen: boolean;
-  devTab: DevTab;
+  /** Which side tab the panel shows, remembered across reloads. */
+  panelTab: PanelTab;
 }
 
-export type DevTab = 'vitals' | 'waste' | 'data';
+export type PanelTab = 'slow' | 'tricks' | 'report' | 'vitals' | 'runtime' | 'unused' | 'weight' | 'data';
 
 export interface PageSnapshot {
   /** Length of visible text in <body>, whitespace collapsed. */
@@ -54,8 +53,7 @@ export const DEFAULT_STATE: TabState = {
   cacheOff: false,
   coveragePending: false,
   coverage: null,
-  devOpen: false,
-  devTab: 'vitals',
+  panelTab: 'slow',
 };
 
 const key = (tabId: number) => `tab:${tabId}`;

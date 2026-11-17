@@ -8,41 +8,41 @@ import { auditImages, renderBlocking, type BlockingResource, type ImageIssue } f
 import { clearHighlights, focusHighlight, setHighlights } from './overlay';
 import { Toggle } from '~/components/Toggle';
 
-interface Props {
+interface UnusedProps {
   unplugged: boolean;
   busy: boolean;
   coverage: CoverageResult | null;
   coveragePending: boolean;
   request: (msg: StateRequest) => Promise<void>;
+}
+
+interface WeightProps {
+  unplugged: boolean;
   showOnPage: boolean;
   setShowOnPage: (on: boolean) => void;
 }
 
-export function WasteTab({ unplugged, busy, coverage, coveragePending, request, showOnPage, setShowOnPage }: Props) {
+/** Network inventory and oversized images for this page. */
+function useWeightData(unplugged: boolean) {
   const [inv, setInv] = useState<NetInventory | null>(null);
   const [images, setImages] = useState<ImageIssue[]>([]);
-  const [blocking, setBlocking] = useState<BlockingResource[]>([]);
 
   const refresh = useCallback(async () => {
     const next = unplugged ? null : await requestNetInventory().catch(() => null);
     setInv(next);
     setImages(auditImages(next?.imageBytes));
-    setBlocking(renderBlocking());
   }, [unplugged]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
-  useEffect(() => {
-    if (!showOnPage) return;
-    setHighlights(images.map((i) => ({ el: i.el, label: ratioLabel(i), kind: 'image' })));
-  }, [showOnPage, images]);
-  useEffect(() => clearHighlights, []);
+  return { inv, images, refresh };
+}
 
+export function UnusedTab({ unplugged, busy, coverage, coveragePending, request }: UnusedProps) {
+  const [blocking] = useState<BlockingResource[]>(renderBlocking);
   const scanHere = coverage && coverage.url === location.href ? coverage : null;
-  const thirdParty = inv?.domains.filter((d) => d.thirdParty) ?? [];
-  const thirdBytes = thirdParty.reduce((n, d) => n + d.bytes, 0);
 
   return (
     <>
@@ -73,6 +73,38 @@ export function WasteTab({ unplugged, busy, coverage, coveragePending, request, 
         </button>
       </Section>
 
+      <Section title="⛔ Render-blocking">
+        {blocking.length === 0 ? (
+          <p className="pm-blurb">Nothing held up the first paint (or this Chrome doesn't report it).</p>
+        ) : (
+          <>
+            <p className="pm-blurb">The browser waited for these before drawing anything. Inline what's critical, defer the rest.</p>
+            <ul className="pm-list">
+              {blocking.map((b, i) => (
+                <Row key={i} name={shortUrl(b.url)} title={b.url} value={formatMs(b.ms)} />
+              ))}
+            </ul>
+          </>
+        )}
+      </Section>
+    </>
+  );
+}
+
+export function WeightTab({ unplugged, showOnPage, setShowOnPage }: WeightProps) {
+  const { inv, images, refresh } = useWeightData(unplugged);
+
+  useEffect(() => {
+    if (!showOnPage) return;
+    setHighlights(images.map((i) => ({ el: i.el, label: ratioLabel(i), kind: 'image' })));
+  }, [showOnPage, images]);
+  useEffect(() => clearHighlights, []);
+
+  const thirdParty = inv?.domains.filter((d) => d.thirdParty) ?? [];
+  const thirdBytes = thirdParty.reduce((n, d) => n + d.bytes, 0);
+
+  return (
+    <>
       <Section title="🏋️ Heaviest downloads" action={<RefreshButton onClick={refresh} />}>
         {!inv ? (
           <p className="pm-blurb">{unplugged ? 'Plug Spud back in and reload to see requests.' : 'Reload the page to list requests.'}</p>
@@ -118,21 +150,6 @@ export function WasteTab({ unplugged, busy, coverage, coveragePending, request, 
           )}
         </Section>
       )}
-
-      <Section title="⛔ Render-blocking">
-        {blocking.length === 0 ? (
-          <p className="pm-blurb">Nothing held up the first paint (or this Chrome doesn't report it).</p>
-        ) : (
-          <>
-            <p className="pm-blurb">The browser waited for these before drawing anything. Inline what's critical, defer the rest.</p>
-            <ul className="pm-list">
-              {blocking.map((b, i) => (
-                <Row key={i} name={shortUrl(b.url)} title={b.url} value={formatMs(b.ms)} />
-              ))}
-            </ul>
-          </>
-        )}
-      </Section>
 
       <Section title="🐘 Oversized images" action={<RefreshButton onClick={refresh} />}>
         {images.length === 0 ? (

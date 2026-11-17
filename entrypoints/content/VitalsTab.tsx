@@ -18,12 +18,11 @@ import { metricsStore } from './metrics';
 import { clearHighlights, setHighlights, type Highlight } from './overlay';
 
 interface Props {
-  unplugged: boolean;
   showOnPage: boolean;
   setShowOnPage: (on: boolean) => void;
 }
 
-export function VitalsTab({ unplugged, showOnPage, setShowOnPage }: Props) {
+export function VitalsTab({ showOnPage, setShowOnPage }: Props) {
   const r = useSyncExternalStore(metricsStore.subscribe, metricsStore.get);
 
   useEffect(() => {
@@ -73,13 +72,6 @@ export function VitalsTab({ unplugged, showOnPage, setShowOnPage }: Props) {
         }
         grade={r.inp != null ? gradeInp(r.inp) : undefined}
       />
-      <MetricCard
-        emoji="🚧"
-        title="Total Blocking Time (TBT)"
-        value={formatMs(r.totalBlockingTime)}
-        detail="Time beyond 50 ms in each long task after the first paint. Lab stand-in for how laggy input feels."
-        grade={r.firstContentfulPaint != null ? gradeTbt(r.totalBlockingTime) : undefined}
-      />
 
       <Toggle
         emoji="👀"
@@ -88,7 +80,21 @@ export function VitalsTab({ unplugged, showOnPage, setShowOnPage }: Props) {
         checked={showOnPage}
         onChange={setShowOnPage}
       />
+    </>
+  );
+}
 
+export function RuntimeTab({ unplugged }: { unplugged: boolean }) {
+  const r = useSyncExternalStore(metricsStore.subscribe, metricsStore.get);
+  return (
+    <>
+      <MetricCard
+        emoji="🚧"
+        title="Total Blocking Time (TBT)"
+        value={formatMs(r.totalBlockingTime)}
+        detail="Time beyond 50 ms in each long task after the first paint. Lab stand-in for how laggy input feels."
+        grade={r.firstContentfulPaint != null ? gradeTbt(r.totalBlockingTime) : undefined}
+      />
       <Counters unplugged={unplugged} />
     </>
   );

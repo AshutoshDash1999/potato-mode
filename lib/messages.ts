@@ -4,7 +4,7 @@ import type { CpuPresetId, NetworkPresetId } from './presets';
 import type { ClearKind, ClearResult } from './clearData';
 import type { NetInventory } from './netTally';
 import type { PerfCounters } from './perfCounters';
-import type { DevTab, PageSnapshot, PanelPos, TabState } from './state';
+import type { PanelTab, PageSnapshot, PanelPos, TabState } from './state';
 
 export interface PageMetrics {
   /** ms from navigation start to the load event; null until it fires. */
@@ -54,7 +54,7 @@ export type PanelRequest =
   | { type: 'reload' }
   | { type: 'getJsBytes' }
   | { type: 'deactivate' }
-  | { type: 'setDevUi'; devOpen?: boolean; devTab?: DevTab }
+  | { type: 'setPanelTab'; tab: PanelTab }
   | { type: 'setCacheOff'; cacheOff: boolean }
   | { type: 'startCoverage' }
   | { type: 'finishCoverage' }

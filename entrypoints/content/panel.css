@@ -46,9 +46,19 @@
 
 /* ---------- Panel ---------- */
 
+/* The panel plus the index tabs sticking out of its left edge. */
+.pm-shell {
+  display: flex;
+  align-items: flex-start;
+}
+
 .pm-panel {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
+  /* Tall enough for the whole tab column, so tabs never hang below the panel. */
+  min-height: min(400px, calc(100vh - 16px));
   max-height: calc(100vh - 16px);
   background: var(--pm-cream);
   border: var(--pm-line);
@@ -130,6 +140,7 @@
   gap: 12px;
   padding: 14px;
   min-height: 0;
+  /* Tabs keep each page short; scrolling is only a fallback for very short windows. */
   overflow-y: auto;
   overscroll-behavior: contain;
   user-select: text;
@@ -155,6 +166,107 @@
 .pm-hint {
   font-size: 12px;
   color: var(--pm-ink-soft);
+}
+
+/* Each tab's content. */
+.pm-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: pm-fade-up 180ms ease-out both;
+}
+
+/* ---------- Index tabs (like a diary's) ---------- */
+
+.pm-tabs {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: 44px;
+  /* Start below the header, and tuck under the panel's left border. */
+  margin-top: 72px;
+  margin-right: -3px;
+}
+
+.pm-tab {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 47px;
+  height: 40px;
+  padding: 0 3px 0 0;
+  font-size: 18px;
+  line-height: 1;
+  background: var(--pm-butter);
+  border: var(--pm-line);
+  border-right: 0;
+  border-radius: 12px 0 0 12px;
+  box-shadow: -2px 2px 0 var(--pm-ink);
+  /* Unselected tabs sit a little further under the panel, so they look shorter. */
+  transform: translateX(7px);
+  transition: transform 140ms ease-out, background-color 140ms ease-out;
+}
+
+/* Each tab tucks slightly under the one below it, like stacked divider tabs. */
+.pm-tab + .pm-tab {
+  margin-top: -8px;
+}
+
+.pm-tab.is-selected {
+  z-index: 2;
+  background: var(--pm-cream);
+  transform: none;
+}
+
+.pm-tab:focus-visible {
+  z-index: 3;
+  outline: 3px solid var(--pm-sky);
+  outline-offset: 2px;
+}
+
+/* Tooltip to the left of the tab, shown on hover (after a short pause) or keyboard focus. */
+.pm-tab__tip {
+  position: absolute;
+  right: calc(100% + 8px);
+  top: 50%;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--pm-cream);
+  background: var(--pm-ink);
+  border-radius: 8px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(4px, -50%);
+  transition: opacity 120ms ease-out, transform 120ms ease-out;
+}
+
+/* Little arrow pointing at the tab. */
+.pm-tab__tip::after {
+  content: '';
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  border: 5px solid transparent;
+  border-left-color: var(--pm-ink);
+  transform: translateY(-50%);
+}
+
+.pm-tab:hover .pm-tab__tip,
+.pm-tab:focus-visible .pm-tab__tip {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+
+.pm-tab:hover .pm-tab__tip {
+  transition-delay: 250ms;
+}
+
+@media (hover: hover) {
+  .pm-tab:not(.is-selected):hover {
+    transform: translateX(3px);
+  }
 }
 
 /* ---------- Minimised bubble ---------- */
@@ -536,34 +648,6 @@
   border-radius: 6px;
 }
 
-/* ---------- For developers ---------- */
-
-.pm-dev__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 0;
-  text-align: left;
-  background: none;
-  border: 0;
-}
-
-.pm-dev__head:focus-visible {
-  outline: 3px solid var(--pm-sky);
-  outline-offset: 4px;
-  border-radius: 8px;
-}
-
-.pm-dev__chevron {
-  font-size: 18px;
-  transition: transform 160ms ease-out;
-}
-
-.pm-dev__chevron.is-open {
-  transform: rotate(180deg);
-}
-
 .pm-sub {
   display: flex;
   flex-direction: column;
@@ -755,12 +839,12 @@
 
 /* ---------- Motion ---------- */
 
-.pm-panel,
+.pm-shell,
 .pm-bubble {
   animation: pm-pop 280ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-.pm-panel {
+.pm-shell {
   transform-origin: top center;
 }
 

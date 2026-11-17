@@ -201,12 +201,8 @@ async function handleRequest(tabId: number, msg: PanelRequest): Promise<Reply> {
       return startScan(tabId);
     case 'finishCoverage':
       return finishScan(tabId);
-    case 'setDevUi': {
-      const patch: Partial<TabState> = {};
-      if (msg.devOpen != null) patch.devOpen = msg.devOpen;
-      if (msg.devTab != null) patch.devTab = msg.devTab;
-      return setTabState(tabId, patch);
-    }
+    case 'setPanelTab':
+      return setTabState(tabId, { panelTab: msg.tab });
     case 'getState':
       return getTabState(tabId);
     case 'reload':
