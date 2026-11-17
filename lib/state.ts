@@ -18,6 +18,16 @@ export interface TabState {
   panelPos: PanelPos | null;
   /** Set when Chrome detached the debugger (e.g. user hit "Cancel" on the bar). */
   unplugged: boolean;
+  /** How the page looked with JavaScript on, taken just before switching it off. */
+  jsSnapshot: PageSnapshot | null;
+}
+
+export interface PageSnapshot {
+  /** Length of visible text in <body>, whitespace collapsed. */
+  textLength: number;
+  elementCount: number;
+  imageCount: number;
+  url: string;
 }
 
 export const DEFAULT_STATE: TabState = {
@@ -28,6 +38,7 @@ export const DEFAULT_STATE: TabState = {
   cssOff: false,
   panelPos: null,
   unplugged: false,
+  jsSnapshot: null,
 };
 
 const key = (tabId: number) => `tab:${tabId}`;
@@ -48,17 +59,29 @@ export async function clearTabState(tabId: number): Promise<void> {
   await browser.storage.session.remove(key(tabId));
 }
 
-// Origins where we blocked JavaScript via contentSettings, so we can always undo it.
-const JS_BLOCKED_KEY = 'jsBlockedOrigins';
-
-export async function getJsBlockedOrigins(): Promise<Record<number, string>> {
-  const res = await browser.storage.local.get(JS_BLOCKED_KEY);
-  return (res[JS_BLOCKED_KEY] as Record<number, string> | undefined) ?? {};
+// Sites where we blocked JavaScript via contentSettings, keyed by tabId,
+// kept in storage.local so we can always undo it, even after a crash.
+export interface JsBlock {
+  /** contentSettings pattern, e.g. "https://example.com/*". */
+  pattern: string;
+  incognito: boolean;
 }
 
-export async function setJsBlockedOrigin(tabId: number, origin: string | null): Promise<void> {
-  const all = await getJsBlockedOrigins();
-  if (origin) all[tabId] = origin;
+const JS_BLOCKED_KEY = 'jsBlocks';
+
+export async function getJsBlocks(): Promise<Record<number, JsBlock>> {
+  const res = await browser.storage.local.get(JS_BLOCKED_KEY);
+  return (res[JS_BLOCKED_KEY] as Record<number, JsBlock> | undefined) ?? {};
+}
+
+export async function setJsBlock(tabId: number, block: JsBlock | null): Promise<Record<number, JsBlock>> {
+  const all = await getJsBlocks();
+  if (block) all[tabId] = block;
   else delete all[tabId];
   await browser.storage.local.set({ [JS_BLOCKED_KEY]: all });
+  return all;
+}
+
+export async function clearJsBlocks(): Promise<void> {
+  await browser.storage.local.remove(JS_BLOCKED_KEY);
 }

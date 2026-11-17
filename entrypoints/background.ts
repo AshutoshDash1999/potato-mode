@@ -1,7 +1,15 @@
 import { isRestrictedUrl } from '~/lib/cdp';
+import { blockJs, cleanupAllJsBlocks, jsPatternFor, unblockJs } from '~/lib/jsBlock';
 import { sendToTab, type PanelRequest } from '~/lib/messages';
 import { applyThrottles, attachAndApply, resetAndDetach, wasDetachedByUs } from '~/lib/session';
-import { clearTabState, getTabState, setTabState, type TabState } from '~/lib/state';
+import {
+  clearTabState,
+  getJsBlocks,
+  getTabState,
+  setTabState,
+  type PageSnapshot,
+  type TabState,
+} from '~/lib/state';
 
 export default defineBackground(() => {
   browser.action.onClicked.addListener((tab) => {
@@ -25,16 +33,38 @@ export default defineBackground(() => {
     void onUnexpectedDetach(tabId, reason);
   });
 
-  // Tab-specific badges can be reset by navigation; re-assert while active.
-  browser.tabs.onUpdated.addListener((tabId, info) => {
-    if (info.status !== 'loading') return;
-    void getTabState(tabId).then((s) => {
-      if (s.active) void updateBadge(tabId, s);
-    });
+  browser.tabs.onUpdated.addListener((tabId, info, tab) => {
+    void onTabUpdated(tabId, info, tab).catch((err) => console.warn('[potato] tab update', err));
   });
 
-  browser.tabs.onRemoved.addListener((tabId) => void clearTabState(tabId));
+  browser.tabs.onRemoved.addListener((tabId) => {
+    void unblockJs(tabId);
+    void clearTabState(tabId);
+  });
+
+  // Tabs from a previous session are gone, so any JS block left behind is stale.
+  browser.runtime.onStartup.addListener(() => void cleanupAllJsBlocks());
+  browser.runtime.onInstalled.addListener(() => void cleanupAllJsBlocks());
 });
+
+async function onTabUpdated(tabId: number, info: Browser.tabs.OnUpdatedInfo, tab: Browser.tabs.Tab) {
+  const state = await getTabState(tabId);
+  if (!state.active) return;
+
+  // JS is blocked per site. If the tab moved to a different site, release the
+  // old block and show JS as on, rather than pretend it's still off.
+  if (info.url && state.jsOff && jsPatternFor(info.url) !== (await getJsBlocks())[tabId]?.pattern) {
+    await unblockJs(tabId);
+    await setTabState(tabId, { jsOff: false, jsSnapshot: null });
+  }
+
+  // Tab-specific badges can be reset by navigation; re-assert while active.
+  if (info.status === 'loading') await updateBadge(tabId, await getTabState(tabId));
+
+  // Make sure the panel comes back after reloads, even if the manifest
+  // content script didn't run (it injects and mounts itself).
+  if (info.status === 'complete' && !isRestrictedUrl(tab.url)) await ensureContentScript(tabId).catch(() => {});
+}
 
 async function toggle(tabId: number, url: string | undefined) {
   const state = await getTabState(tabId);
@@ -65,10 +95,33 @@ async function toggle(tabId: number, url: string | undefined) {
 
 async function deactivate(tabId: number): Promise<TabState> {
   await resetAndDetach(tabId);
-  const next = await setTabState(tabId, { active: false, unplugged: false });
+  const hadJsOff = await unblockJs(tabId);
+  const next = await setTabState(tabId, { active: false, unplugged: false, jsOff: false, jsSnapshot: null });
   await updateBadge(tabId, next);
   await sendToTab(tabId, { type: 'unmount' });
+  // Bring the page's JavaScript back right away instead of leaving a broken page.
+  if (hadJsOff) scheduleReload(tabId);
   return next;
+}
+
+async function setJs(tabId: number, jsOff: boolean, snapshot?: PageSnapshot): Promise<TabState> {
+  if (jsOff) {
+    const tab = await browser.tabs.get(tabId);
+    const pattern = jsPatternFor(tab.url);
+    if (!pattern) return getTabState(tabId);
+    await blockJs(tabId, { pattern, incognito: tab.incognito });
+  } else {
+    await unblockJs(tabId);
+  }
+  const next = await setTabState(tabId, { jsOff, jsSnapshot: jsOff ? (snapshot ?? null) : null });
+  // The content setting only applies to new page loads.
+  scheduleReload(tabId);
+  return next;
+}
+
+/** Reload just after replying, so the panel gets its answer before the page goes away. */
+function scheduleReload(tabId: number) {
+  setTimeout(() => void browser.tabs.reload(tabId).catch(() => {}), 50);
 }
 
 /** Chrome dropped our debugger: user pressed Cancel on the yellow bar, or the page became undebuggable. */
@@ -112,8 +165,10 @@ async function handleRequest(tabId: number, msg: PanelRequest): Promise<TabState
       return updateThrottles(tabId, { network: msg.network });
     case 'setCpu':
       return updateThrottles(tabId, { cpu: msg.cpu });
+    case 'setJs':
+      return setJs(tabId, msg.jsOff, msg.snapshot);
     default:
-      // JS and CSS controls arrive in later steps.
+      // The CSS control arrives in the next step.
       return getTabState(tabId);
   }
 }

@@ -4,7 +4,10 @@ import { Segmented } from '~/components/Segmented';
 import { sendToBackground, type PanelRequest } from '~/lib/messages';
 import { CPU_PRESETS, NETWORK_ORDER, NETWORK_PRESETS } from '~/lib/presets';
 import type { TabState } from '~/lib/state';
+import { Toggle } from '~/components/Toggle';
 import { bus } from './bus';
+import { JsVerdictBox } from './JsVerdictBox';
+import { takeSnapshot } from './snapshot';
 import { useDrag } from './useDrag';
 
 export const PANEL_WIDTH = 340;
@@ -48,6 +51,8 @@ export function Panel({ initialState }: { initialState: TabState }) {
     try {
       const next = await sendToBackground(msg);
       if (next) setState(next);
+    } catch {
+      // The page is reloading (JS toggle) or the extension was reloaded; nothing to update.
     } finally {
       setBusy(false);
     }
@@ -71,6 +76,7 @@ export function Panel({ initialState }: { initialState: TabState }) {
   }
 
   const net = NETWORK_PRESETS[state.network];
+  const canBlockJs = location.protocol === 'http:' || location.protocol === 'https:';
 
   return (
     <div
@@ -171,6 +177,25 @@ export function Panel({ initialState }: { initialState: TabState }) {
             </p>
           </section>
         )}
+
+        <section className="pm-card">
+          <h3 className="pm-card__title">🧪 Page tricks</h3>
+          <Toggle
+            emoji="📜"
+            label="Turn off JavaScript"
+            hint={
+              canBlockJs
+                ? 'For this whole site. The page reloads.'
+                : 'Only works on normal http/https websites.'
+            }
+            checked={state.jsOff}
+            disabled={busy || !canBlockJs}
+            onChange={(jsOff) =>
+              void request({ type: 'setJs', jsOff, snapshot: jsOff ? takeSnapshot() : undefined })
+            }
+          />
+          {state.jsOff && <JsVerdictBox before={state.jsSnapshot} />}
+        </section>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 // Typed messages between the background worker and the in-page panel.
 
 import type { CpuPresetId, NetworkPresetId } from './presets';
-import type { PanelPos, TabState } from './state';
+import type { PageSnapshot, PanelPos, TabState } from './state';
 
 export interface PageMetrics {
   /** ms from navigation start to the load event; null until it fires. */
@@ -30,7 +30,7 @@ export type PanelRequest =
   | { type: 'getState' }
   | { type: 'setNetwork'; network: NetworkPresetId }
   | { type: 'setCpu'; cpu: CpuPresetId }
-  | { type: 'setJs'; jsOff: boolean }
+  | { type: 'setJs'; jsOff: boolean; snapshot?: PageSnapshot }
   | { type: 'setCss'; cssOff: boolean }
   | { type: 'savePos'; pos: PanelPos }
   | { type: 'replug' }
