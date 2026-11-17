@@ -96,7 +96,13 @@ async function toggle(tabId: number, url: string | undefined) {
 async function deactivate(tabId: number): Promise<TabState> {
   await resetAndDetach(tabId);
   const hadJsOff = await unblockJs(tabId);
-  const next = await setTabState(tabId, { active: false, unplugged: false, jsOff: false, jsSnapshot: null });
+  const next = await setTabState(tabId, {
+    active: false,
+    unplugged: false,
+    jsOff: false,
+    jsSnapshot: null,
+    cssOff: false,
+  });
   await updateBadge(tabId, next);
   await sendToTab(tabId, { type: 'unmount' });
   // Bring the page's JavaScript back right away instead of leaving a broken page.
@@ -167,8 +173,10 @@ async function handleRequest(tabId: number, msg: PanelRequest): Promise<TabState
       return updateThrottles(tabId, { cpu: msg.cpu });
     case 'setJs':
       return setJs(tabId, msg.jsOff, msg.snapshot);
+    case 'setCss':
+      // Stripping happens in the page; we only remember it so it survives reloads.
+      return setTabState(tabId, { cssOff: msg.cssOff });
     default:
-      // The CSS control arrives in the next step.
       return getTabState(tabId);
   }
 }

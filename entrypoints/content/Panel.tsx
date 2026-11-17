@@ -6,6 +6,7 @@ import { CPU_PRESETS, NETWORK_ORDER, NETWORK_PRESETS } from '~/lib/presets';
 import type { TabState } from '~/lib/state';
 import { Toggle } from '~/components/Toggle';
 import { bus } from './bus';
+import { restoreCss, stripCss, type CssStripStats } from './cssStrip';
 import { JsVerdictBox } from './JsVerdictBox';
 import { takeSnapshot } from './snapshot';
 import { useDrag } from './useDrag';
@@ -38,6 +39,17 @@ export function Panel({ initialState }: { initialState: TabState }) {
       }),
     [],
   );
+
+  // Strip the page's CSS while the switch is on; always restore when switched off or unmounted.
+  const [cssStats, setCssStats] = useState<CssStripStats | null>(null);
+  useEffect(() => {
+    if (!state.cssOff) return;
+    setCssStats(stripCss());
+    return () => {
+      restoreCss();
+      setCssStats(null);
+    };
+  }, [state.cssOff]);
 
   const { ref, pos, setMinimized, justDragged, handleProps } = useDrag(
     state.panelPos,
@@ -195,6 +207,24 @@ export function Panel({ initialState }: { initialState: TabState }) {
             }
           />
           {state.jsOff && <JsVerdictBox before={state.jsSnapshot} />}
+          <Toggle
+            emoji="🎨"
+            label="Strip all CSS"
+            hint="Instant, no reload. Shows the bare HTML underneath."
+            checked={state.cssOff}
+            disabled={busy}
+            onChange={(cssOff) => void request({ type: 'setCss', cssOff })}
+          />
+          {state.cssOff && cssStats && (
+            <p className="pm-blurb">
+              <strong>
+                Removed {cssStats.sheets} stylesheet{cssStats.sheets === 1 ? '' : 's'} and {cssStats.inlineStyles}{' '}
+                inline style{cssStats.inlineStyles === 1 ? '' : 's'}.
+              </strong>{' '}
+              If the page still reads top to bottom in a sensible order, its HTML is well built. That also helps
+              screen readers and anyone whose CSS fails to load.
+            </p>
+          )}
         </section>
       </div>
     </div>
