@@ -37,6 +37,7 @@ export type PanelRequest =
 
 /** Background → panel (content script). */
 export type BackgroundEvent =
+  | { type: 'ping' }
   | { type: 'mount'; state: TabState }
   | { type: 'unmount' }
   | { type: 'state'; state: TabState }

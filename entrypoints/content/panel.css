@@ -1,0 +1,180 @@
+/*
+ * Potato Mode panel styles. Lives inside a shadow root, so page CSS can't reach
+ * it. All sizes are px on purpose: host pages often change the root font size,
+ * which would make rem-based sizes scale from site to site.
+ */
+
+.pm-root {
+  --pm-ink: #2b2118;
+  --pm-ink-soft: #5c4a3a;
+  --pm-spud: #e8b86b;
+  --pm-spud-dark: #c98f45;
+  --pm-butter: #fff1c9;
+  --pm-cream: #fffaf0;
+  --pm-mint: #9fe0c3;
+  --pm-sky: #a8d8ff;
+  --pm-tomato: #ff7a6b;
+  --pm-line: 3px solid var(--pm-ink);
+  --pm-shadow: 4px 4px 0 var(--pm-ink);
+  --pm-shadow-sm: 2px 2px 0 var(--pm-ink);
+  --pm-radius: 20px;
+  --pm-font: 'PotatoFredoka', 'Fredoka', ui-rounded, 'SF Pro Rounded', 'Comic Sans MS', system-ui, sans-serif;
+
+  position: fixed;
+  z-index: 2147483647;
+  box-sizing: border-box;
+  font-family: var(--pm-font);
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--pm-ink);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  touch-action: none;
+}
+
+.pm-root *,
+.pm-root *::before,
+.pm-root *::after {
+  box-sizing: border-box;
+}
+
+.pm-root button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* ---------- Panel ---------- */
+
+.pm-panel {
+  background: var(--pm-cream);
+  border: var(--pm-line);
+  border-radius: var(--pm-radius);
+  box-shadow: 6px 6px 0 var(--pm-ink);
+  overflow: hidden;
+}
+
+.pm-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 10px 12px;
+  background: var(--pm-spud);
+  border-bottom: var(--pm-line);
+  cursor: grab;
+}
+
+.pm-header:active {
+  cursor: grabbing;
+}
+
+.pm-header__title {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.pm-header__title strong {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.pm-header__title span {
+  font-size: 12px;
+  color: var(--pm-ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pm-icon-btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  background: var(--pm-butter);
+  border: var(--pm-line);
+  border-radius: 999px;
+  box-shadow: var(--pm-shadow-sm);
+  transition: transform 80ms ease-out, box-shadow 80ms ease-out;
+}
+
+.pm-icon-btn--close {
+  background: var(--pm-tomato);
+}
+
+.pm-icon-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 var(--pm-ink);
+}
+
+.pm-icon-btn:focus-visible,
+.pm-bubble__btn:focus-visible {
+  outline: 3px solid var(--pm-sky);
+  outline-offset: 2px;
+}
+
+.pm-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+}
+
+.pm-speech {
+  position: relative;
+  padding: 12px 14px;
+  background: #fff;
+  border: var(--pm-line);
+  border-radius: 16px;
+  box-shadow: var(--pm-shadow-sm);
+}
+
+.pm-speech p {
+  margin: 0;
+}
+
+.pm-speech p + p {
+  margin-top: 6px;
+}
+
+.pm-hint {
+  font-size: 12px;
+  color: var(--pm-ink-soft);
+}
+
+/* ---------- Minimised bubble ---------- */
+
+.pm-bubble {
+  cursor: grab;
+}
+
+.pm-bubble__btn {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  background: var(--pm-butter);
+  border: var(--pm-line);
+  border-radius: 999px;
+  box-shadow: var(--pm-shadow);
+  cursor: inherit;
+}
+
+.pm-bubble__btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: var(--pm-shadow-sm);
+}
+
+.pm-potato {
+  display: block;
+  flex: none;
+  pointer-events: none;
+}

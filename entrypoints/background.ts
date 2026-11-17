@@ -1,6 +1,71 @@
+import { isRestrictedUrl } from '~/lib/cdp';
+import { sendToTab, type PanelRequest } from '~/lib/messages';
+import { clearTabState, getTabState, setTabState, type TabState } from '~/lib/state';
+
 export default defineBackground(() => {
-  // Wired up in later steps: toolbar toggle, debugger session, throttling.
   browser.action.onClicked.addListener((tab) => {
-    console.log('[potato] toolbar clicked on tab', tab.id);
+    if (tab.id == null) return;
+    void toggle(tab.id, tab.url).catch((err) => console.error('[potato] toggle failed', err));
   });
+
+  browser.runtime.onMessage.addListener((msg: PanelRequest, sender, sendResponse) => {
+    const tabId = sender.tab?.id;
+    if (tabId == null) return;
+    handleRequest(tabId, msg).then(sendResponse, (err) => {
+      console.error('[potato] request failed', msg, err);
+      sendResponse(null);
+    });
+    return true; // keep the channel open for the async response
+  });
+
+  browser.tabs.onRemoved.addListener((tabId) => void clearTabState(tabId));
 });
+
+async function toggle(tabId: number, url: string | undefined) {
+  const state = await getTabState(tabId);
+  if (state.active) return deactivate(tabId);
+
+  if (isRestrictedUrl(url)) {
+    console.info('[potato] Chrome does not allow extensions on this page:', url);
+    return;
+  }
+  const next = await setTabState(tabId, { active: true, unplugged: false });
+  if (await ensureContentScript(tabId)) {
+    await sendToTab(tabId, { type: 'mount', state: next });
+  }
+  // If we had to inject the script, it reads the state and mounts itself.
+}
+
+async function deactivate(tabId: number): Promise<TabState> {
+  const next = await setTabState(tabId, { active: false, unplugged: false });
+  await sendToTab(tabId, { type: 'unmount' });
+  return next;
+}
+
+/**
+ * Returns true if a content script was already listening.
+ * Otherwise injects one (e.g. tabs opened before the extension was installed or reloaded).
+ */
+async function ensureContentScript(tabId: number): Promise<boolean> {
+  try {
+    if (await browser.tabs.sendMessage(tabId, { type: 'ping' })) return true;
+  } catch {
+    // No listener; inject below.
+  }
+  await browser.scripting.executeScript({ target: { tabId }, files: ['/content-scripts/content.js'] });
+  return false;
+}
+
+async function handleRequest(tabId: number, msg: PanelRequest): Promise<TabState | null> {
+  switch (msg.type) {
+    case 'getState':
+      return getTabState(tabId);
+    case 'savePos':
+      return setTabState(tabId, { panelPos: msg.pos });
+    case 'deactivate':
+      return deactivate(tabId);
+    default:
+      // Network, CPU, JS and CSS controls arrive in later steps.
+      return getTabState(tabId);
+  }
+}
