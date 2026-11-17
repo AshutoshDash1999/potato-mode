@@ -1,7 +1,9 @@
 import { isAttached, isRestrictedUrl } from '~/lib/cdp';
+import { cancelCoverage, finishCoverage, forgetCoverage, onCoverageEvent, startCoverage } from '~/lib/coverage';
 import { forgetTab, getJsBytes, onCdpEvent } from '~/lib/jsTally';
 import { blockJs, cleanupAllJsBlocks, jsPatternFor, unblockJs } from '~/lib/jsBlock';
 import { sendToTab, type JsBytes, type PanelRequest } from '~/lib/messages';
+import { forgetNet, getNetInventory, onNetEvent, type NetInventory } from '~/lib/netTally';
 import { getPerfCounters, type PerfCounters } from '~/lib/perfCounters';
 import { applyThrottles, attachAndApply, resetAndDetach, wasDetachedByUs } from '~/lib/session';
 import {
@@ -32,6 +34,8 @@ export default defineBackground(() => {
   browser.debugger.onEvent.addListener((source, method, params) => {
     const tabId = source.tabId;
     if (tabId == null) return;
+    onNetEvent(tabId, method, params);
+    onCoverageEvent(tabId, method, params);
     if (onCdpEvent(tabId, method, params)) pushJsBytes(tabId);
   });
 
@@ -49,6 +53,8 @@ export default defineBackground(() => {
     void unblockJs(tabId);
     void clearTabState(tabId);
     forgetTab(tabId);
+    forgetNet(tabId);
+    forgetCoverage(tabId);
   });
 
   // Tabs from a previous session are gone, so any JS block left behind is stale.
@@ -103,8 +109,10 @@ async function toggle(tabId: number, url: string | undefined) {
 }
 
 async function deactivate(tabId: number): Promise<TabState> {
+  await cancelCoverage(tabId).catch(() => {});
   await resetAndDetach(tabId);
   forgetTab(tabId);
+  forgetNet(tabId);
   const hadJsOff = await unblockJs(tabId);
   const next = await setTabState(tabId, {
     active: false,
@@ -112,6 +120,8 @@ async function deactivate(tabId: number): Promise<TabState> {
     jsOff: false,
     jsSnapshot: null,
     cssOff: false,
+    coveragePending: false,
+    coverage: null,
   });
   await updateBadge(tabId, next);
   await sendToTab(tabId, { type: 'unmount' });
@@ -151,7 +161,8 @@ async function onUnexpectedDetach(tabId: number, reason: string) {
     await clearTabState(tabId);
     return;
   }
-  const next = await setTabState(tabId, { unplugged: true });
+  forgetCoverage(tabId);
+  const next = await setTabState(tabId, { unplugged: true, coveragePending: false });
   await updateBadge(tabId, next);
   await sendToTab(tabId, { type: 'state', state: next });
 }
@@ -170,7 +181,7 @@ async function ensureContentScript(tabId: number): Promise<boolean> {
   return false;
 }
 
-type Reply = TabState | JsBytes | PerfCounters | null;
+type Reply = TabState | JsBytes | PerfCounters | NetInventory | null;
 
 async function handleRequest(tabId: number, msg: PanelRequest): Promise<Reply> {
   switch (msg.type) {
@@ -178,6 +189,12 @@ async function handleRequest(tabId: number, msg: PanelRequest): Promise<Reply> {
       return (await isAttached(tabId)) ? getJsBytes(tabId) : null;
     case 'getPerfCounters':
       return (await isAttached(tabId)) ? getPerfCounters(tabId) : null;
+    case 'getNetInventory':
+      return (await isAttached(tabId)) ? getNetInventory(tabId) : null;
+    case 'startCoverage':
+      return startScan(tabId);
+    case 'finishCoverage':
+      return finishScan(tabId);
     case 'setDevUi': {
       const patch: Partial<TabState> = {};
       if (msg.devOpen != null) patch.devOpen = msg.devOpen;
@@ -207,6 +224,28 @@ async function handleRequest(tabId: number, msg: PanelRequest): Promise<Reply> {
     default:
       return getTabState(tabId);
   }
+}
+
+/** Arm a coverage scan, then reload so it covers the whole page load. The new page calls finishScan. */
+async function startScan(tabId: number): Promise<TabState> {
+  const state = await getTabState(tabId);
+  if (!state.active || state.unplugged || !(await isAttached(tabId))) return state;
+  await startCoverage(tabId);
+  const next = await setTabState(tabId, { coveragePending: true, coverage: null });
+  scheduleReload(tabId);
+  return next;
+}
+
+async function finishScan(tabId: number): Promise<TabState> {
+  const tab = await browser.tabs.get(tabId);
+  let coverage = null;
+  try {
+    // Null if the scan was lost (e.g. the extension restarted mid-scan).
+    coverage = await finishCoverage(tabId, tab.url ?? '');
+  } catch (err) {
+    console.warn('[potato] coverage failed', err);
+  }
+  return setTabState(tabId, { coveragePending: false, coverage });
 }
 
 async function replug(tabId: number): Promise<TabState> {

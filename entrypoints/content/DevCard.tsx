@@ -5,6 +5,7 @@ import type { StateRequest } from '~/lib/messages';
 import type { DevTab, TabState } from '~/lib/state';
 import { ErrorBoundary } from './ErrorBoundary';
 import { VitalsTab } from './VitalsTab';
+import { WasteTab } from './WasteTab';
 
 interface Props {
   state: TabState;
@@ -14,6 +15,7 @@ interface Props {
 
 const TABS: { value: DevTab; label: string; emoji: string; title: string }[] = [
   { value: 'vitals', label: 'Vitals', emoji: '💓', title: 'Core Web Vitals and runtime counters' },
+  { value: 'waste', label: 'Waste', emoji: '🗑️', title: 'Unused code, heavy files, oversized images' },
 ];
 
 export function DevCard({ state, busy, request }: Props) {
@@ -50,6 +52,17 @@ export function DevCard({ state, busy, request }: Props) {
           <ErrorBoundary key={tab}>
           {tab === 'vitals' && (
             <VitalsTab unplugged={state.unplugged} showOnPage={showOnPage} setShowOnPage={setShowOnPage} />
+          )}
+          {tab === 'waste' && (
+            <WasteTab
+              unplugged={state.unplugged}
+              busy={busy}
+              coverage={state.coverage}
+              coveragePending={state.coveragePending}
+              request={request}
+              showOnPage={showOnPage}
+              setShowOnPage={setShowOnPage}
+            />
           )}
           </ErrorBoundary>
         </>

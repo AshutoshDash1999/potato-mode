@@ -6,6 +6,7 @@ import { bus } from './bus';
 import { loadFont } from './font';
 import { setJsBytes, startMetrics } from './metrics';
 import { Panel } from './Panel';
+import { afterLoad } from './snapshot';
 
 const UI_NAME = 'potato-mode-panel';
 
@@ -86,6 +87,13 @@ export default defineContentScript({
     // Restore the panel after a reload or navigation if Potato Mode is on for this tab.
     const state = await sendToBackground({ type: 'getState' }).catch(() => null);
     if (state?.active) await mount(state);
+
+    // This load is the one an unused-code scan reloaded for: finish it once things settle.
+    if (state?.active && state.coveragePending) {
+      await afterLoad(2000);
+      const next = await sendToBackground({ type: 'finishCoverage' }).catch(() => null);
+      if (next && !ctx.isInvalid) bus.emit({ type: 'state', state: next });
+    }
   },
 });
 

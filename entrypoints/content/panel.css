@@ -632,6 +632,106 @@
   white-space: nowrap;
 }
 
+.pm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pm-list--types {
+  margin-top: 4px;
+}
+
+.pm-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 12px;
+  text-align: left;
+  background: var(--pm-cream);
+  border: 2px solid #e4d6bf;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.pm-row--button {
+  border-color: var(--pm-ink);
+}
+
+.pm-row--button:hover {
+  background: var(--pm-butter);
+}
+
+.pm-row--button:focus-visible {
+  outline: 3px solid var(--pm-sky);
+  outline-offset: 1px;
+}
+
+/* A faint bar behind the row showing its share of the total. */
+.pm-row__share {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: #fde7b0;
+  pointer-events: none;
+}
+
+.pm-row__name,
+.pm-row__tag,
+.pm-row__value {
+  position: relative;
+}
+
+.pm-row__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-row__tag {
+  flex: none;
+  padding: 0 5px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #fff;
+  border: 1px solid var(--pm-ink-soft);
+  border-radius: 6px;
+}
+
+.pm-row__value {
+  flex: none;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-cov {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pm-bar {
+  height: 12px;
+  background: var(--pm-tomato);
+  border: 2px solid var(--pm-ink);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.pm-bar__fill {
+  display: block;
+  height: 100%;
+  background: var(--pm-mint);
+  border-right: 2px solid var(--pm-ink);
+}
+
 
 /* ---------- Motion ---------- */
 

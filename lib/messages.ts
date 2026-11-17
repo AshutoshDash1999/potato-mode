@@ -1,6 +1,7 @@
 // Typed messages between the background worker and the in-page panel.
 
 import type { CpuPresetId, NetworkPresetId } from './presets';
+import type { NetInventory } from './netTally';
 import type { PerfCounters } from './perfCounters';
 import type { DevTab, PageSnapshot, PanelPos, TabState } from './state';
 
@@ -53,7 +54,10 @@ export type PanelRequest =
   | { type: 'getJsBytes' }
   | { type: 'deactivate' }
   | { type: 'setDevUi'; devOpen?: boolean; devTab?: DevTab }
-  | { type: 'getPerfCounters' };
+  | { type: 'startCoverage' }
+  | { type: 'finishCoverage' }
+  | { type: 'getPerfCounters' }
+  | { type: 'getNetInventory' };
 
 /** Background → panel (content script). */
 export type BackgroundEvent =
@@ -67,7 +71,7 @@ export type BackgroundEvent =
 /** Requests answered with something other than TabState. */
 type InfoRequest = Extract<
   PanelRequest,
-  { type: 'getJsBytes' | 'getPerfCounters' }
+  { type: 'getJsBytes' | 'getPerfCounters' | 'getNetInventory' }
 >;
 
 /** Requests answered with the tab's updated TabState. */
@@ -99,4 +103,9 @@ export async function sendToTab(tabId: number, msg: BackgroundEvent): Promise<vo
 /** Null when the debugger isn't attached. */
 export function requestPerfCounters(): Promise<PerfCounters | null> {
   return browser.runtime.sendMessage({ type: 'getPerfCounters' } satisfies PanelRequest);
+}
+
+/** Null until a full page load has been watched with the debugger attached. */
+export function requestNetInventory(): Promise<NetInventory | null> {
+  return browser.runtime.sendMessage({ type: 'getNetInventory' } satisfies PanelRequest);
 }

@@ -1,6 +1,7 @@
 // Per-tab Potato Mode state, kept in storage.session so it survives
 // service-worker restarts but is cleared when the browser closes.
 
+import type { CoverageResult } from './coverage';
 import type { CpuPresetId, NetworkPresetId } from './presets';
 
 export interface PanelPos {
@@ -20,6 +21,10 @@ export interface TabState {
   unplugged: boolean;
   /** How the page looked with JavaScript on, taken just before switching it off. */
   jsSnapshot: PageSnapshot | null;
+  /** A coverage scan is armed; the next page load finishes it. */
+  coveragePending: boolean;
+  /** Last unused-code scan for this tab. */
+  coverage: CoverageResult | null;
   /** Developer card UI, remembered across reloads. */
   devOpen: boolean;
   devTab: DevTab;
@@ -44,6 +49,8 @@ export const DEFAULT_STATE: TabState = {
   panelPos: null,
   unplugged: false,
   jsSnapshot: null,
+  coveragePending: false,
+  coverage: null,
   devOpen: false,
   devTab: 'vitals',
 };
