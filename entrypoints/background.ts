@@ -134,9 +134,12 @@ async function setJs(tabId: number, jsOff: boolean, snapshot?: PageSnapshot): Pr
   return next;
 }
 
-/** Reload just after replying, so the panel gets its answer before the page goes away. */
+/**
+ * Hard-reload just after replying, so the panel gets its answer before the page goes away.
+ * Bypassing the cache makes every reload we trigger behave like a first visit.
+ */
 function scheduleReload(tabId: number) {
-  setTimeout(() => void browser.tabs.reload(tabId).catch(() => {}), 50);
+  setTimeout(() => void browser.tabs.reload(tabId, { bypassCache: true }).catch(() => {}), 50);
 }
 
 /** Chrome dropped our debugger: user pressed Cancel on the yellow bar, or the page became undebuggable. */
@@ -171,6 +174,9 @@ async function handleRequest(tabId: number, msg: PanelRequest): Promise<TabState
     case 'getJsBytes':
       return (await isAttached(tabId)) ? getJsBytes(tabId) : null;
     case 'getState':
+      return getTabState(tabId);
+    case 'reload':
+      scheduleReload(tabId);
       return getTabState(tabId);
     case 'savePos':
       return setTabState(tabId, { panelPos: msg.pos });

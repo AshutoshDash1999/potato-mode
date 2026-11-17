@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { MetricCard } from '~/components/MetricCard';
+import { sendToBackground } from '~/lib/messages';
 import { NETWORK_PRESETS, secondsToDownload, type NetworkPresetId } from '~/lib/presets';
 import {
   formatBytes,
@@ -86,7 +87,7 @@ export function ReportCard({ network, unplugged }: { network: NetworkPresetId; u
 
       <div className="pm-report__footer">
         <p className="pm-blurb">These numbers are for this page load. Change a setting, then reload to compare.</p>
-        <button className="pm-btn pm-btn--small" onClick={() => location.reload()}>
+        <button className="pm-btn pm-btn--small" onClick={() => void sendToBackground({ type: 'reload' })}>
           ↻ Reload
         </button>
       </div>

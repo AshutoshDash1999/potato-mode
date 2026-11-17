@@ -160,7 +160,7 @@ export function Panel({ initialState }: { initialState: TabState }) {
                   : 'Reload to feel the whole page load this slowly.'}
             </p>
             {state.network !== 'normal' && (
-              <button className="pm-btn pm-btn--small" onClick={() => location.reload()}>
+              <button className="pm-btn pm-btn--small" onClick={() => void sendToBackground({ type: 'reload' })}>
                 ↻ Reload page
               </button>
             )}

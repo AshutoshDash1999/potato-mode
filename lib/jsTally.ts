@@ -6,7 +6,8 @@ import type { JsBytes } from './messages';
 interface Tally {
   /** False until we've watched a page load from its start (attaching mid-page misses scripts). */
   sawNavigation: boolean;
-  scriptRequests: Set<string>;
+  /** In-flight script requests → decoded bytes received so far (fallback size). */
+  scriptRequests: Map<string, number>;
   bytes: number;
   count: number;
 }
@@ -14,7 +15,7 @@ interface Tally {
 const tallies = new Map<number, Tally>();
 
 function fresh(sawNavigation = false): Tally {
-  return { sawNavigation, scriptRequests: new Set(), bytes: 0, count: 0 };
+  return { sawNavigation, scriptRequests: new Map(), bytes: 0, count: 0 };
 }
 
 function tallyFor(tabId: number): Tally {
@@ -36,12 +37,23 @@ export function onCdpEvent(tabId: number, method: string, params: any): boolean 
       }
       return false;
     case 'Network.responseReceived':
-      if (params?.type === 'Script') tallyFor(tabId).scriptRequests.add(params.requestId);
+      if (params?.type === 'Script') tallyFor(tabId).scriptRequests.set(params.requestId, 0);
       return false;
+    case 'Network.dataReceived': {
+      const reqs = tallyFor(tabId).scriptRequests;
+      const sofar = reqs.get(params?.requestId);
+      if (sofar != null) reqs.set(params.requestId, sofar + Math.max(0, params.dataLength ?? 0));
+      return false;
+    }
     case 'Network.loadingFinished': {
       const t = tallyFor(tabId);
-      if (!t.scriptRequests.delete(params?.requestId)) return false;
-      t.bytes += Math.max(0, params.encodedDataLength ?? 0);
+      const decoded = t.scriptRequests.get(params?.requestId);
+      if (decoded == null) return false;
+      t.scriptRequests.delete(params.requestId);
+      // Cache and service-worker hits report 0 bytes on the wire; use the
+      // decoded size so the script still counts toward the total.
+      const encoded = Math.max(0, params.encodedDataLength ?? 0);
+      t.bytes += encoded > 0 ? encoded : decoded;
       t.count += 1;
       return t.sawNavigation;
     }

@@ -34,6 +34,7 @@ export type PanelRequest =
   | { type: 'setCss'; cssOff: boolean }
   | { type: 'savePos'; pos: PanelPos }
   | { type: 'replug' }
+  | { type: 'reload' }
   | { type: 'getJsBytes' }
   | { type: 'deactivate' };
 
