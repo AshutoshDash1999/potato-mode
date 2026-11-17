@@ -110,8 +110,10 @@ async function handleRequest(tabId: number, msg: PanelRequest): Promise<TabState
       return replug(tabId);
     case 'setNetwork':
       return updateThrottles(tabId, { network: msg.network });
+    case 'setCpu':
+      return updateThrottles(tabId, { cpu: msg.cpu });
     default:
-      // CPU, JS and CSS controls arrive in later steps.
+      // JS and CSS controls arrive in later steps.
       return getTabState(tabId);
   }
 }

@@ -18,6 +18,8 @@ export async function attachAndApply(tabId: number, state: TabState): Promise<vo
 
 export async function applyThrottles(tabId: number, state: TabState): Promise<void> {
   await cdp.send(tabId, 'Network.emulateNetworkConditions', networkConditions(state.network));
+  // Rate is a slowdown factor relative to this machine (1 = no throttling).
+  await cdp.send(tabId, 'Emulation.setCPUThrottlingRate', { rate: state.cpu });
 }
 
 /** Clear all throttling and detach. Safe to call when not attached. */
@@ -26,6 +28,7 @@ export async function resetAndDetach(tabId: number): Promise<void> {
   detachingByUs.add(tabId);
   try {
     await cdp.send(tabId, 'Network.emulateNetworkConditions', networkConditions('normal')).catch(() => {});
+    await cdp.send(tabId, 'Emulation.setCPUThrottlingRate', { rate: 1 }).catch(() => {});
     await cdp.detach(tabId);
   } finally {
     // onDetach fires asynchronously after detach resolves; give it a moment.

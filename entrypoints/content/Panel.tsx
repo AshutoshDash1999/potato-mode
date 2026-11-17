@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Potato, type PotatoMood } from '~/components/Potato';
 import { Segmented } from '~/components/Segmented';
 import { sendToBackground, type PanelRequest } from '~/lib/messages';
-import { NETWORK_ORDER, NETWORK_PRESETS } from '~/lib/presets';
+import { CPU_PRESETS, NETWORK_ORDER, NETWORK_PRESETS } from '~/lib/presets';
 import type { TabState } from '~/lib/state';
 import { bus } from './bus';
 import { useDrag } from './useDrag';
@@ -12,14 +12,16 @@ export const PANEL_WIDTH = 340;
 function moodFor(state: TabState): PotatoMood {
   if (state.unplugged) return 'sad';
   if (state.network === 'offline') return 'sleepy';
-  if (state.network === 'slow3g') return 'sweaty';
+  if (state.cpu >= 6) return 'dizzy';
+  if (state.network === 'slow3g' || state.cpu >= 4) return 'sweaty';
   return 'happy';
 }
 
 function summary(state: TabState): string {
   if (state.unplugged) return 'Unplugged — nothing is slowed down';
   const n = NETWORK_PRESETS[state.network];
-  return `${n.emoji} ${n.label}`;
+  const cpu = state.cpu === 1 ? 'full-speed CPU' : `${state.cpu}× slower CPU`;
+  return `${n.emoji} ${n.label} · 🧠 ${cpu}`;
 }
 
 export function Panel({ initialState }: { initialState: TabState }) {
@@ -136,6 +138,37 @@ export function Panel({ initialState }: { initialState: TabState }) {
                 ↻ Reload page
               </button>
             )}
+          </section>
+        )}
+
+        {!state.unplugged && (
+          <section className="pm-card">
+            <h3 className="pm-card__title">🧠 CPU</h3>
+            <Segmented
+              label="CPU slowdown"
+              value={state.cpu}
+              disabled={busy}
+              options={CPU_PRESETS.map((p) => ({
+                value: p.rate,
+                label: p.rate === 1 ? 'Full speed' : `${p.label} slower`,
+                emoji: p.rate === 1 ? '🏎️' : p.rate === 4 ? '🚲' : '🐌',
+                title: p.blurb,
+              }))}
+              onChange={(cpu) => void request({ type: 'setCpu', cpu })}
+            />
+            <p className="pm-blurb">
+              {state.cpu === 1 ? (
+                <>
+                  <strong>Your computer at full speed.</strong> Pick a slowdown to see scripts, scrolling and
+                  clicks get sluggish.
+                </>
+              ) : (
+                <>
+                  <strong>Everything runs {state.cpu}× slower than on your computer.</strong> That's a rough
+                  stand-in for a cheaper phone, not an exact model of one.
+                </>
+              )}
+            </p>
           </section>
         )}
       </div>

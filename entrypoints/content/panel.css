@@ -47,6 +47,9 @@
 /* ---------- Panel ---------- */
 
 .pm-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 16px);
   background: var(--pm-cream);
   border: var(--pm-line);
   border-radius: var(--pm-radius);
@@ -125,6 +128,10 @@
   flex-direction: column;
   gap: 12px;
   padding: 14px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  user-select: text;
 }
 
 .pm-speech {
