@@ -1,6 +1,7 @@
-import { isRestrictedUrl } from '~/lib/cdp';
+import { isAttached, isRestrictedUrl } from '~/lib/cdp';
+import { forgetTab, getJsBytes, onCdpEvent } from '~/lib/jsTally';
 import { blockJs, cleanupAllJsBlocks, jsPatternFor, unblockJs } from '~/lib/jsBlock';
-import { sendToTab, type PanelRequest } from '~/lib/messages';
+import { sendToTab, type JsBytes, type PanelRequest } from '~/lib/messages';
 import { applyThrottles, attachAndApply, resetAndDetach, wasDetachedByUs } from '~/lib/session';
 import {
   clearTabState,
@@ -27,6 +28,12 @@ export default defineBackground(() => {
     return true; // keep the channel open for the async response
   });
 
+  browser.debugger.onEvent.addListener((source, method, params) => {
+    const tabId = source.tabId;
+    if (tabId == null || !onCdpEvent(tabId, method, params)) return;
+    pushJsBytes(tabId);
+  });
+
   browser.debugger.onDetach.addListener((source, reason) => {
     const tabId = source.tabId;
     if (tabId == null || wasDetachedByUs(tabId)) return;
@@ -40,6 +47,7 @@ export default defineBackground(() => {
   browser.tabs.onRemoved.addListener((tabId) => {
     void unblockJs(tabId);
     void clearTabState(tabId);
+    forgetTab(tabId);
   });
 
   // Tabs from a previous session are gone, so any JS block left behind is stale.
@@ -95,6 +103,7 @@ async function toggle(tabId: number, url: string | undefined) {
 
 async function deactivate(tabId: number): Promise<TabState> {
   await resetAndDetach(tabId);
+  forgetTab(tabId);
   const hadJsOff = await unblockJs(tabId);
   const next = await setTabState(tabId, {
     active: false,
@@ -157,8 +166,10 @@ async function ensureContentScript(tabId: number): Promise<boolean> {
   return false;
 }
 
-async function handleRequest(tabId: number, msg: PanelRequest): Promise<TabState | null> {
+async function handleRequest(tabId: number, msg: PanelRequest): Promise<TabState | JsBytes | null> {
   switch (msg.type) {
+    case 'getJsBytes':
+      return (await isAttached(tabId)) ? getJsBytes(tabId) : null;
     case 'getState':
       return getTabState(tabId);
     case 'savePos':
@@ -225,4 +236,18 @@ async function flashBadge(tabId: number, text: string, title: string) {
     void browser.action.setBadgeText({ tabId, text: '' }).catch(() => {});
     void browser.action.setTitle({ tabId, title: 'Toggle Potato Mode' }).catch(() => {});
   }, 3000);
+}
+
+/** Send the running JS total to the panel, at most every 250 ms per tab. */
+const pushTimers = new Map<number, ReturnType<typeof setTimeout>>();
+function pushJsBytes(tabId: number) {
+  if (pushTimers.has(tabId)) return;
+  pushTimers.set(
+    tabId,
+    setTimeout(() => {
+      pushTimers.delete(tabId);
+      const js = getJsBytes(tabId);
+      if (js) void sendToTab(tabId, { type: 'jsBytes', ...js });
+    }, 250),
+  );
 }

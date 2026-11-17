@@ -34,6 +34,7 @@ export type PanelRequest =
   | { type: 'setCss'; cssOff: boolean }
   | { type: 'savePos'; pos: PanelPos }
   | { type: 'replug' }
+  | { type: 'getJsBytes' }
   | { type: 'deactivate' };
 
 /** Background → panel (content script). */
@@ -45,8 +46,22 @@ export type BackgroundEvent =
   | { type: 'jsBytes'; bytes: number; count: number }
   | { type: 'detached' };
 
-export function sendToBackground(msg: PanelRequest): Promise<TabState | null> {
+/** Requests answered with the tab's updated TabState. */
+export type StateRequest = Exclude<PanelRequest, { type: 'getJsBytes' }>;
+
+export function sendToBackground(msg: StateRequest): Promise<TabState | null> {
   return browser.runtime.sendMessage(msg);
+}
+
+export interface JsBytes {
+  /** Compressed bytes over the wire for script responses on this page load. */
+  bytes: number;
+  count: number;
+}
+
+/** Null when the debugger isn't attached (nothing is being counted). */
+export function requestJsBytes(): Promise<JsBytes | null> {
+  return browser.runtime.sendMessage({ type: 'getJsBytes' } satisfies PanelRequest);
 }
 
 export async function sendToTab(tabId: number, msg: BackgroundEvent): Promise<void> {

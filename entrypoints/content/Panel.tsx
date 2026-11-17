@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Potato, type PotatoMood } from '~/components/Potato';
 import { Segmented } from '~/components/Segmented';
-import { sendToBackground, type PanelRequest } from '~/lib/messages';
+import { sendToBackground, type StateRequest } from '~/lib/messages';
 import { CPU_PRESETS, NETWORK_ORDER, NETWORK_PRESETS } from '~/lib/presets';
 import type { TabState } from '~/lib/state';
 import { Toggle } from '~/components/Toggle';
 import { bus } from './bus';
 import { restoreCss, stripCss, type CssStripStats } from './cssStrip';
 import { JsVerdictBox } from './JsVerdictBox';
+import { ReportCard } from './ReportCard';
 import { takeSnapshot } from './snapshot';
 import { useDrag } from './useDrag';
 
@@ -58,7 +59,7 @@ export function Panel({ initialState }: { initialState: TabState }) {
   );
 
   /** Send a request, then adopt the state the background returns. */
-  const request = async (msg: PanelRequest) => {
+  const request = async (msg: StateRequest) => {
     setBusy(true);
     try {
       const next = await sendToBackground(msg);
@@ -226,6 +227,8 @@ export function Panel({ initialState }: { initialState: TabState }) {
             </p>
           )}
         </section>
+
+        <ReportCard network={state.network} unplugged={state.unplugged} />
       </div>
     </div>
   );

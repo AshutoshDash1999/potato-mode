@@ -1,20 +1,24 @@
 import './panel.css';
 import ReactDOM from 'react-dom/client';
-import { sendToBackground, type BackgroundEvent } from '~/lib/messages';
+import { requestJsBytes, sendToBackground, type BackgroundEvent } from '~/lib/messages';
 import type { TabState } from '~/lib/state';
 import { bus } from './bus';
 import { loadFont } from './font';
+import { setJsBytes, startMetrics } from './metrics';
 import { Panel } from './Panel';
 
 const UI_NAME = 'potato-mode-panel';
 
 export default defineContentScript({
   matches: ['<all_urls>'],
-  // Start early so later steps can observe performance from the very beginning.
+  // Start early so performance is observed from the very beginning of the load.
   runAt: 'document_start',
   cssInjectionMode: 'ui',
 
   async main(ctx) {
+    // Observe from the very start of the page load, even before the panel shows.
+    startMetrics();
+
     let ui: { remove(): void } | null = null;
     let mounting = false;
 
@@ -46,6 +50,8 @@ export default defineContentScript({
         if (ctx.isInvalid) return;
         shadowUi.mount();
         ui = shadowUi;
+        // Scripts mostly finished downloading before we mounted; catch up on the total.
+        setJsBytes(await requestJsBytes().catch(() => null));
       } finally {
         mounting = false;
       }
@@ -67,6 +73,9 @@ export default defineContentScript({
           break;
         case 'unmount':
           unmount();
+          break;
+        case 'jsBytes':
+          setJsBytes({ bytes: msg.bytes, count: msg.count });
           break;
       }
       bus.emit(msg);

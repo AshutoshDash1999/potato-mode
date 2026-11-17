@@ -417,3 +417,97 @@
 .pm-verdict__stat {
   font-weight: 600;
 }
+
+/* ---------- Report card ---------- */
+
+.pm-metric {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  background: var(--pm-cream);
+  border: 2px solid var(--pm-ink);
+  border-radius: 14px;
+  user-select: text;
+}
+
+.pm-metric--good {
+  background: #e6f8ee;
+}
+
+.pm-metric--meh {
+  background: #fff4d2;
+}
+
+.pm-metric--bad {
+  background: #ffe6e1;
+}
+
+.pm-metric__emoji {
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.pm-metric__main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.pm-metric__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pm-ink-soft);
+}
+
+.pm-metric__value {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.pm-metric__value small {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--pm-ink-soft);
+}
+
+.pm-metric__detail {
+  font-size: 12px;
+  color: var(--pm-ink-soft);
+}
+
+.pm-metric__grade {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.pm-metric__grade-word {
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pm-report__footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pm-report__footer .pm-blurb {
+  flex: 1;
+  font-size: 12px;
+}
+
+.pm-report__footer .pm-btn {
+  flex: none;
+  align-self: center;
+}
