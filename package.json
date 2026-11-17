@@ -1,6 +1,6 @@
 {
   "name": "potato-mode",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Simulate slow devices in Chrome, with a cartoon panel and plain-language metrics",
   "type": "module",
