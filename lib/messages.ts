@@ -1,7 +1,8 @@
 // Typed messages between the background worker and the in-page panel.
 
 import type { CpuPresetId, NetworkPresetId } from './presets';
-import type { PageSnapshot, PanelPos, TabState } from './state';
+import type { PerfCounters } from './perfCounters';
+import type { DevTab, PageSnapshot, PanelPos, TabState } from './state';
 
 export interface PageMetrics {
   /** ms from navigation start to the load event; null until it fires. */
@@ -13,6 +14,15 @@ export interface PageMetrics {
   longestTask: number;
   /** Sum over long tasks of (duration - 50 ms). */
   blockedTime: number;
+  /** Time to first byte of the main document. */
+  ttfb: number | null;
+  /** Cumulative Layout Shift (worst session window). */
+  cls: number | null;
+  /** Interaction to Next Paint; null until the first interaction. */
+  inp: number | null;
+  interactionCount: number;
+  /** Blocked time (beyond 50 ms per task) after first contentful paint. */
+  totalBlockingTime: number;
 }
 
 export const EMPTY_METRICS: PageMetrics = {
@@ -23,6 +33,11 @@ export const EMPTY_METRICS: PageMetrics = {
   longTaskCount: 0,
   longestTask: 0,
   blockedTime: 0,
+  ttfb: null,
+  cls: null,
+  inp: null,
+  interactionCount: 0,
+  totalBlockingTime: 0,
 };
 
 /** Panel → background. Each returns the updated TabState (or null if not applicable). */
@@ -36,7 +51,9 @@ export type PanelRequest =
   | { type: 'replug' }
   | { type: 'reload' }
   | { type: 'getJsBytes' }
-  | { type: 'deactivate' };
+  | { type: 'deactivate' }
+  | { type: 'setDevUi'; devOpen?: boolean; devTab?: DevTab }
+  | { type: 'getPerfCounters' };
 
 /** Background → panel (content script). */
 export type BackgroundEvent =
@@ -47,8 +64,14 @@ export type BackgroundEvent =
   | { type: 'jsBytes'; bytes: number; count: number }
   | { type: 'detached' };
 
+/** Requests answered with something other than TabState. */
+type InfoRequest = Extract<
+  PanelRequest,
+  { type: 'getJsBytes' | 'getPerfCounters' }
+>;
+
 /** Requests answered with the tab's updated TabState. */
-export type StateRequest = Exclude<PanelRequest, { type: 'getJsBytes' }>;
+export type StateRequest = Exclude<PanelRequest, InfoRequest>;
 
 export function sendToBackground(msg: StateRequest): Promise<TabState | null> {
   return browser.runtime.sendMessage(msg);
@@ -71,4 +94,9 @@ export async function sendToTab(tabId: number, msg: BackgroundEvent): Promise<vo
   } catch {
     // No content script there yet (page still loading, or a restricted page).
   }
+}
+
+/** Null when the debugger isn't attached. */
+export function requestPerfCounters(): Promise<PerfCounters | null> {
+  return browser.runtime.sendMessage({ type: 'getPerfCounters' } satisfies PanelRequest);
 }

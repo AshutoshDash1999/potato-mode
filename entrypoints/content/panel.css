@@ -54,7 +54,8 @@
   border: var(--pm-line);
   border-radius: var(--pm-radius);
   box-shadow: 6px 6px 0 var(--pm-ink);
-  overflow: hidden;
+  /* clip, not hidden: a hidden-overflow box can still be scrolled by focus or scrollIntoView. */
+  overflow: clip;
 }
 
 .pm-header {
@@ -309,6 +310,8 @@
 /* ---------- Toggle switch ---------- */
 
 .pm-toggle {
+  /* Keeps the hidden checkbox inside the scrolling body; otherwise focusing it scrolls the whole panel. */
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -532,6 +535,103 @@
   border: 2px solid var(--pm-ink);
   border-radius: 6px;
 }
+
+/* ---------- For developers ---------- */
+
+.pm-dev__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  text-align: left;
+  background: none;
+  border: 0;
+}
+
+.pm-dev__head:focus-visible {
+  outline: 3px solid var(--pm-sky);
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+
+.pm-dev__chevron {
+  font-size: 18px;
+  transition: transform 160ms ease-out;
+}
+
+.pm-dev__chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.pm-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 2px dashed #e4d6bf;
+}
+
+.pm-sub__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pm-sub__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.pm-icon-btn--small {
+  width: 24px;
+  height: 24px;
+  font-size: 14px;
+  border-width: 2px;
+}
+
+.pm-blurb--tiny {
+  font-size: 11px;
+}
+
+.pm-code {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 11px;
+  word-break: break-all;
+}
+
+.pm-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.pm-stat {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 6px 8px;
+  background: var(--pm-cream);
+  border: 2px solid var(--pm-ink);
+  border-radius: 10px;
+}
+
+.pm-stat__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pm-ink-soft);
+}
+
+.pm-stat__value {
+  font-size: 13px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 
 /* ---------- Motion ---------- */
 

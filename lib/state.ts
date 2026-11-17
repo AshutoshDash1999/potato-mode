@@ -20,7 +20,12 @@ export interface TabState {
   unplugged: boolean;
   /** How the page looked with JavaScript on, taken just before switching it off. */
   jsSnapshot: PageSnapshot | null;
+  /** Developer card UI, remembered across reloads. */
+  devOpen: boolean;
+  devTab: DevTab;
 }
+
+export type DevTab = 'vitals' | 'waste' | 'data';
 
 export interface PageSnapshot {
   /** Length of visible text in <body>, whitespace collapsed. */
@@ -39,6 +44,8 @@ export const DEFAULT_STATE: TabState = {
   panelPos: null,
   unplugged: false,
   jsSnapshot: null,
+  devOpen: false,
+  devTab: 'vitals',
 };
 
 const key = (tabId: number) => `tab:${tabId}`;

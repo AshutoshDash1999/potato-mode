@@ -2,6 +2,7 @@ import { isAttached, isRestrictedUrl } from '~/lib/cdp';
 import { forgetTab, getJsBytes, onCdpEvent } from '~/lib/jsTally';
 import { blockJs, cleanupAllJsBlocks, jsPatternFor, unblockJs } from '~/lib/jsBlock';
 import { sendToTab, type JsBytes, type PanelRequest } from '~/lib/messages';
+import { getPerfCounters, type PerfCounters } from '~/lib/perfCounters';
 import { applyThrottles, attachAndApply, resetAndDetach, wasDetachedByUs } from '~/lib/session';
 import {
   clearTabState,
@@ -30,8 +31,8 @@ export default defineBackground(() => {
 
   browser.debugger.onEvent.addListener((source, method, params) => {
     const tabId = source.tabId;
-    if (tabId == null || !onCdpEvent(tabId, method, params)) return;
-    pushJsBytes(tabId);
+    if (tabId == null) return;
+    if (onCdpEvent(tabId, method, params)) pushJsBytes(tabId);
   });
 
   browser.debugger.onDetach.addListener((source, reason) => {
@@ -169,10 +170,20 @@ async function ensureContentScript(tabId: number): Promise<boolean> {
   return false;
 }
 
-async function handleRequest(tabId: number, msg: PanelRequest): Promise<TabState | JsBytes | null> {
+type Reply = TabState | JsBytes | PerfCounters | null;
+
+async function handleRequest(tabId: number, msg: PanelRequest): Promise<Reply> {
   switch (msg.type) {
     case 'getJsBytes':
       return (await isAttached(tabId)) ? getJsBytes(tabId) : null;
+    case 'getPerfCounters':
+      return (await isAttached(tabId)) ? getPerfCounters(tabId) : null;
+    case 'setDevUi': {
+      const patch: Partial<TabState> = {};
+      if (msg.devOpen != null) patch.devOpen = msg.devOpen;
+      if (msg.devTab != null) patch.devTab = msg.devTab;
+      return setTabState(tabId, patch);
+    }
     case 'getState':
       return getTabState(tabId);
     case 'reload':

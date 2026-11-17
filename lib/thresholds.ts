@@ -29,6 +29,21 @@ export const gradeLongestTask = (ms: number) => grade(ms, 50, 200);
 /** Total blocked time beyond 50 ms per task, in ms. */
 export const gradeBlockedTime = (ms: number) => grade(ms, 200, 600);
 
+/** Cumulative Layout Shift (unitless). */
+export const gradeCls = (score: number) => grade(score, 0.1, 0.25);
+
+/** Interaction to Next Paint, in ms. */
+export const gradeInp = (ms: number) => grade(ms, 200, 500);
+
+/** Time to first byte, in ms. */
+export const gradeTtfb = (ms: number) => grade(ms, 800, 1800);
+
+/** Total Blocking Time, in ms. */
+export const gradeTbt = (ms: number) => grade(ms, 200, 600);
+
+/** DOM elements on the page. */
+export const gradeDomNodes = (n: number) => grade(n, 800, 1500);
+
 export const LONG_TASK_MS = 50;
 
 export function formatBytes(bytes: number): string {

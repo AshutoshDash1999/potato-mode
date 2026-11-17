@@ -7,6 +7,7 @@ import type { TabState } from '~/lib/state';
 import { Toggle } from '~/components/Toggle';
 import { bus } from './bus';
 import { restoreCss, stripCss, type CssStripStats } from './cssStrip';
+import { DevCard } from './DevCard';
 import { IntroNote } from './IntroNote';
 import { JsVerdictBox } from './JsVerdictBox';
 import { ReportCard } from './ReportCard';
@@ -236,6 +237,8 @@ export function Panel({ initialState }: { initialState: TabState }) {
         </section>
 
         <ReportCard network={state.network} unplugged={state.unplugged} />
+
+        <DevCard state={state} busy={busy} request={request} />
       </div>
     </div>
   );
