@@ -1,14 +1,30 @@
 import { useEffect, useState } from 'react';
-import { Potato } from '~/components/Potato';
-import { sendToBackground } from '~/lib/messages';
+import { Potato, type PotatoMood } from '~/components/Potato';
+import { Segmented } from '~/components/Segmented';
+import { sendToBackground, type PanelRequest } from '~/lib/messages';
+import { NETWORK_ORDER, NETWORK_PRESETS } from '~/lib/presets';
 import type { TabState } from '~/lib/state';
 import { bus } from './bus';
 import { useDrag } from './useDrag';
 
-export const PANEL_WIDTH = 320;
+export const PANEL_WIDTH = 340;
+
+function moodFor(state: TabState): PotatoMood {
+  if (state.unplugged) return 'sad';
+  if (state.network === 'offline') return 'sleepy';
+  if (state.network === 'slow3g') return 'sweaty';
+  return 'happy';
+}
+
+function summary(state: TabState): string {
+  if (state.unplugged) return 'Unplugged — nothing is slowed down';
+  const n = NETWORK_PRESETS[state.network];
+  return `${n.emoji} ${n.label}`;
+}
 
 export function Panel({ initialState }: { initialState: TabState }) {
   const [state, setState] = useState(initialState);
+  const [busy, setBusy] = useState(false);
 
   useEffect(
     () =>
@@ -24,6 +40,18 @@ export function Panel({ initialState }: { initialState: TabState }) {
     (p) => void sendToBackground({ type: 'savePos', pos: p }),
   );
 
+  /** Send a request, then adopt the state the background returns. */
+  const request = async (msg: PanelRequest) => {
+    setBusy(true);
+    try {
+      const next = await sendToBackground(msg);
+      if (next) setState(next);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const mood = moodFor(state);
   const style = { left: pos.x, top: pos.y };
 
   if (pos.minimized) {
@@ -34,11 +62,13 @@ export function Panel({ initialState }: { initialState: TabState }) {
           title="Open Potato Mode (drag to move)"
           onClick={() => !justDragged.current && setMinimized(false)}
         >
-          <Potato size={44} />
+          <Potato size={44} mood={mood} />
         </button>
       </div>
     );
   }
+
+  const net = NETWORK_PRESETS[state.network];
 
   return (
     <div
@@ -49,10 +79,10 @@ export function Panel({ initialState }: { initialState: TabState }) {
       aria-label="Potato Mode"
     >
       <header className="pm-header" {...handleProps}>
-        <Potato size={44} />
+        <Potato size={44} mood={mood} />
         <div className="pm-header__title">
           <strong>Potato Mode</strong>
-          <span>{state.active ? 'Making this page slow…' : 'Off'}</span>
+          <span>{summary(state)}</span>
         </div>
         <button data-nodrag className="pm-icon-btn" title="Shrink to a potato" onClick={() => setMinimized(true)}>
           –
@@ -61,20 +91,53 @@ export function Panel({ initialState }: { initialState: TabState }) {
           data-nodrag
           className="pm-icon-btn pm-icon-btn--close"
           title="Turn Potato Mode off"
-          onClick={() => void sendToBackground({ type: 'deactivate' })}
+          onClick={() => void request({ type: 'deactivate' })}
         >
           ×
         </button>
       </header>
 
       <div className="pm-body">
-        <div className="pm-speech">
-          <p>
-            Hi, I'm <strong>Spud</strong>! I'll show you how this page feels on a slow phone or a bad
-            connection.
-          </p>
-          <p className="pm-hint">Drag me by my head. Press – to shrink me into a potato.</p>
-        </div>
+        {state.unplugged ? (
+          <div className="pm-speech pm-speech--warn">
+            <p>
+              <strong>I got unplugged!</strong> Someone pressed <em>Cancel</em> on Chrome's yellow
+              "debugging" bar, so I can't slow this page down anymore.
+            </p>
+            <button className="pm-btn" disabled={busy} onClick={() => void request({ type: 'replug' })}>
+              🔌 Plug me back in
+            </button>
+          </div>
+        ) : (
+          <section className="pm-card">
+            <h3 className="pm-card__title">📶 Network</h3>
+            <Segmented
+              label="Network speed"
+              value={state.network}
+              disabled={busy}
+              options={NETWORK_ORDER.map((id) => ({
+                value: id,
+                label: NETWORK_PRESETS[id].label,
+                emoji: NETWORK_PRESETS[id].emoji,
+                title: NETWORK_PRESETS[id].blurb,
+              }))}
+              onChange={(network) => void request({ type: 'setNetwork', network })}
+            />
+            <p className="pm-blurb">
+              <strong>{net.blurb}.</strong>{' '}
+              {state.network === 'normal'
+                ? 'Nothing is slowed down.'
+                : state.network === 'offline'
+                  ? 'New requests will fail, just like losing signal.'
+                  : 'Reload to feel the whole page load this slowly.'}
+            </p>
+            {state.network !== 'normal' && (
+              <button className="pm-btn pm-btn--small" onClick={() => location.reload()}>
+                ↻ Reload page
+              </button>
+            )}
+          </section>
+        )}
       </div>
     </div>
   );

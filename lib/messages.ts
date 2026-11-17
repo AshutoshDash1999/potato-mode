@@ -33,6 +33,7 @@ export type PanelRequest =
   | { type: 'setJs'; jsOff: boolean }
   | { type: 'setCss'; cssOff: boolean }
   | { type: 'savePos'; pos: PanelPos }
+  | { type: 'replug' }
   | { type: 'deactivate' };
 
 /** Background → panel (content script). */
