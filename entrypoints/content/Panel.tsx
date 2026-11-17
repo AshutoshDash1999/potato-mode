@@ -7,6 +7,7 @@ import type { TabState } from '~/lib/state';
 import { Toggle } from '~/components/Toggle';
 import { bus } from './bus';
 import { restoreCss, stripCss, type CssStripStats } from './cssStrip';
+import { IntroNote } from './IntroNote';
 import { JsVerdictBox } from './JsVerdictBox';
 import { ReportCard } from './ReportCard';
 import { takeSnapshot } from './snapshot';
@@ -82,7 +83,9 @@ export function Panel({ initialState }: { initialState: TabState }) {
           title="Open Potato Mode (drag to move)"
           onClick={() => !justDragged.current && setMinimized(false)}
         >
-          <Potato size={44} mood={mood} />
+          <span key={mood} className="pm-mood">
+            <Potato size={44} mood={mood} />
+          </span>
         </button>
       </div>
     );
@@ -100,7 +103,10 @@ export function Panel({ initialState }: { initialState: TabState }) {
       aria-label="Potato Mode"
     >
       <header className="pm-header" {...handleProps}>
-        <Potato size={44} mood={mood} />
+        {/* Keyed by mood so Spud does a little "boing" whenever the face changes. */}
+        <span key={mood} className="pm-mood">
+          <Potato size={44} mood={mood} />
+        </span>
         <div className="pm-header__title">
           <strong>Potato Mode</strong>
           <span>{summary(state)}</span>
@@ -119,6 +125,7 @@ export function Panel({ initialState }: { initialState: TabState }) {
       </header>
 
       <div className="pm-body">
+        {!state.unplugged && <IntroNote />}
         {state.unplugged ? (
           <div className="pm-speech pm-speech--warn">
             <p>

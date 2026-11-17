@@ -511,3 +511,118 @@
   flex: none;
   align-self: center;
 }
+
+/* ---------- First-run note ---------- */
+
+.pm-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #fff8e1;
+}
+
+.pm-intro p + p {
+  margin-top: 0;
+}
+
+.pm-intro__bar {
+  padding: 0 5px;
+  font-weight: 600;
+  background: #fde68a;
+  border: 2px solid var(--pm-ink);
+  border-radius: 6px;
+}
+
+/* ---------- Motion ---------- */
+
+.pm-panel,
+.pm-bubble {
+  animation: pm-pop 280ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.pm-panel {
+  transform-origin: top center;
+}
+
+@keyframes pm-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.85) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Spud squishes whenever his face changes. */
+.pm-mood {
+  display: block;
+  flex: none;
+  animation: pm-boing 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes pm-boing {
+  0% {
+    transform: scale(1, 1);
+  }
+  30% {
+    transform: scale(1.18, 0.82);
+  }
+  60% {
+    transform: scale(0.92, 1.08);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+
+.pm-bubble__btn:hover .pm-mood {
+  animation: pm-wiggle 500ms ease-in-out;
+}
+
+@keyframes pm-wiggle {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-10deg);
+  }
+  75% {
+    transform: rotate(10deg);
+  }
+}
+
+/* Buttons lift a little on hover, then press flat on click. */
+@media (hover: hover) {
+  .pm-btn:hover:not(:disabled):not(:active),
+  .pm-icon-btn:hover:not(:active) {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--pm-ink);
+  }
+}
+
+.pm-verdict,
+.pm-intro {
+  animation: pm-fade-up 220ms ease-out both;
+}
+
+@keyframes pm-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pm-root,
+  .pm-root * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
