@@ -1,8 +1,8 @@
 {
-  "name": "wxt-react-starter",
-  "version": "0.0.0",
+  "name": "potato-mode",
+  "version": "0.1.0",
   "private": true,
-  "description": "manifest.json description",
+  "description": "Simulate slow devices in Chrome, with a cartoon panel and plain-language metrics",
   "type": "module",
   "scripts": {
     "dev": "wxt",
