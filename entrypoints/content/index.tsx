@@ -19,6 +19,7 @@ export default defineContentScript({
   async main(ctx) {
     // Observe from the very start of the page load, even before the panel shows.
     startMetrics();
+    shieldScrollFromPage();
 
     let ui: { remove(): void } | null = null;
     let mounting = false;
@@ -96,6 +97,24 @@ export default defineContentScript({
     }
   },
 });
+
+/**
+ * Smooth-scroll / scroll-jacking libraries (Lenis, Locomotive, fullPage…) listen for wheel and
+ * touch events on window and preventDefault them, which kills native scrolling inside the panel.
+ * We run at document_start, so this capture listener on window fires before any page listener:
+ * events that start inside the panel stop here and never reach the page. The browser's default
+ * scroll still happens, and overscroll-behavior on .pm-body keeps it from chaining to the page.
+ * Nothing in the panel itself handles these events, so stopping them early costs us nothing.
+ */
+function shieldScrollFromPage() {
+  const stop = (e: Event) => {
+    // Events from inside a shadow root are retargeted to its host when seen from window.
+    if ((e.target as Element | null)?.localName === UI_NAME) e.stopImmediatePropagation();
+  };
+  for (const type of ['wheel', 'mousewheel', 'touchstart', 'touchmove']) {
+    window.addEventListener(type, stop, { capture: true, passive: true });
+  }
+}
 
 function domReady(): Promise<void> {
   if (document.readyState !== 'loading') return Promise.resolve();

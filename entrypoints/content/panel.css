@@ -29,7 +29,6 @@
   color: var(--pm-ink);
   -webkit-font-smoothing: antialiased;
   user-select: none;
-  touch-action: none;
 }
 
 .pm-root *,
@@ -76,6 +75,8 @@
   background: var(--pm-spud);
   border-bottom: var(--pm-line);
   cursor: grab;
+  /* Drag handle: no touch panning here. Kept off .pm-root so the body can still scroll by touch. */
+  touch-action: none;
 }
 
 .pm-header:active {
@@ -273,6 +274,7 @@
 
 .pm-bubble {
   cursor: grab;
+  touch-action: none;
 }
 
 .pm-bubble__btn {
